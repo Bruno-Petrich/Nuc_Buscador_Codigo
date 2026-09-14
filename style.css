@@ -88,7 +88,7 @@ body::before {
 }
 
 .app-container {
-    max-width: 600px;
+    max-width: 1400px;
     margin: 0 auto;
     width: 100%;
     display: flex;
@@ -310,9 +310,15 @@ input[type="text"]::placeholder {
 
 /* Result Cards */
 .results-list {
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: 1fr;
     gap: 1rem;
+}
+
+@media (min-width: 768px) {
+    .results-list {
+        grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    }
 }
 
 .result-card {
@@ -439,4 +445,28 @@ mark {
     color: var(--text-primary);
     padding: 0 2px;
     border-radius: 2px;
+}
+
+.edit-btn {
+    background: transparent;
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    border-radius: var(--border-radius-sm);
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.edit-btn:hover {
+    color: var(--text-primary);
+    background: rgba(255, 255, 255, 0.1);
+    border-color: var(--accent-color);
+}
+
+[data-theme="light"] .edit-btn:hover {
+    background: rgba(0, 0, 0, 0.05);
 }
