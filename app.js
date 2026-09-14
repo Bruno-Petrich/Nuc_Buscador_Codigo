@@ -352,7 +352,7 @@ async function saveToGitHub() {
         const putRes = await fetch(getUrl, {
             method: 'PUT',
             headers: {
-                'Authorization': `token ${token}`,
+                'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
@@ -362,11 +362,14 @@ async function saveToGitHub() {
             })
         });
         
-        if (!putRes.ok) throw new Error("Falha ao salvar o arquivo no GitHub.");
+        if (!putRes.ok) {
+            const errData = await putRes.text();
+            throw new Error(`Falha ao salvar no GitHub (${putRes.status}): ${errData}`);
+        }
         
-        statusText.textContent = "Salvo com sucesso no GitHub!";
+        statusText.textContent = "Salvo com sucesso no GitHub! (Pode levar 1-3 min para atualizar no link)";
         statusText.style.color = "var(--success-color)";
-        setTimeout(() => { statusText.textContent = ""; }, 3000);
+        setTimeout(() => { statusText.textContent = ""; }, 5000);
         
     } catch (error) {
         console.error(error);
