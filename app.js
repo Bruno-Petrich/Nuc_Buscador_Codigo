@@ -275,7 +275,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // Função para editar descrição
-window.editDescription = function(codigo) {
+window.editDescription = async function(codigo) {
     const senha = prompt("Digite a senha para habilitar a edição:");
     if (senha !== "Nuctech08") {
         if (senha !== null) alert("Senha incorreta!");
@@ -288,6 +288,93 @@ window.editDescription = function(codigo) {
         if (novaDescricao !== null && novaDescricao.trim() !== "") {
             globalData[itemIndex].descricao = novaDescricao.trim();
             handleSearch(); // Atualiza a tela com a busca atual
+            
+            // Salvar no GitHub
+            await saveToGitHub();
         }
     }
 };
+
+async function saveToGitHub() {
+    let token = localStorage.getItem('github_token');
+    if (!token) {
+        token = prompt("Para salvar as alterações no repositório, insira seu Personal Access Token (PAT) do GitHub:");
+        if (!token) {
+            alert("Salvamento no GitHub cancelado (token não fornecido). A alteração foi feita apenas localmente.");
+            return;
+        }
+        localStorage.setItem('github_token', token);
+    }
+    
+    statusText.textContent = "Salvando no GitHub...";
+    loader.classList.remove('hidden');
+    statusText.style.color = "var(--text-secondary)";
+    
+    try {
+        // Preparar dados para Excel (formatando chaves)
+        const exportData = globalData.map(item => ({
+            'Código': item.codigo,
+            'Descrição': item.descricao
+        }));
+        
+        // Criar o arquivo base64 a partir do exportData
+        const worksheet = XLSX.utils.json_to_sheet(exportData);
+        const newWorkbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(newWorkbook, worksheet, "Peças");
+        
+        const base64Data = XLSX.write(newWorkbook, { type: 'base64', bookType: 'xlsx' });
+        
+        const owner = "Bruno-Petrich";
+        const repo = "Nuc_Buscador_Codigo";
+        const path = "pecas_consolidadas.xlsx";
+        
+        const getUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
+        
+        // 1. Obter o SHA do arquivo atual no GitHub
+        const getRes = await fetch(getUrl, {
+            headers: {
+                'Authorization': `token ${token}`
+            }
+        });
+        
+        if (!getRes.ok) {
+            if (getRes.status === 401) {
+                localStorage.removeItem('github_token');
+                throw new Error("Token do GitHub inválido ou expirado. Recarregue e tente novamente.");
+            }
+            throw new Error("Falha ao obter as informações do arquivo no GitHub.");
+        }
+        
+        const fileInfo = await getRes.json();
+        const sha = fileInfo.sha;
+        
+        // 2. Fazer o commit
+        const putRes = await fetch(getUrl, {
+            method: 'PUT',
+            headers: {
+                'Authorization': `token ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                message: "update: descrição da peça atualizada via interface web",
+                content: base64Data,
+                sha: sha
+            })
+        });
+        
+        if (!putRes.ok) throw new Error("Falha ao salvar o arquivo no GitHub.");
+        
+        statusText.textContent = "Salvo com sucesso no GitHub!";
+        statusText.style.color = "var(--success-color)";
+        setTimeout(() => { statusText.textContent = ""; }, 3000);
+        
+    } catch (error) {
+        console.error(error);
+        alert("Erro ao salvar no GitHub: " + error.message);
+        statusText.textContent = "Erro ao salvar no GitHub.";
+        statusText.style.color = "var(--danger-color)";
+    } finally {
+        loader.classList.add('hidden');
+    }
+}
+
